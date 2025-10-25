@@ -10,16 +10,17 @@ while true; do
     timeout ${INTERVAL:-30} tshark -i eth0 -w /pcap/capture.pcap
     
     # 2. C++ 파서를 사용하여 pcap 파일 분석
-    # /pcap/capture.pcap 파일을 읽어 /pcap/output/parsed_logs.jsonl 생성
+    # 이 스크립트는 Dockerfile에 의해 현재 아키텍처에 맞는 pcap_parser가 준비되었다고 가정합니다.
     ./pcap_parser
     
     # 3. 분석된 jsonl 데이터를 Kafka로 스트리밍
-    if [ -f /pcap/output/parsed_logs.jsonl ]; then
+    # ✨ 수정된 부분: 파일이 존재하고, 내용이 비어있지 않은지 함께 확인합니다.
+    if [ -f /pcap/output/parsed_logs.jsonl ] && [ -s /pcap/output/parsed_logs.jsonl ]; then
         python3 ./kafka_producer.py
         # 다음 사이클을 위해 이전 파일 삭제
         rm /pcap/output/parsed_logs.jsonl
     else
-        echo "Parser did not create the output file. Skipping kafka stream."
+        echo "Parser did not create the output file or the file is empty. Skipping kafka stream."
     fi
     
     echo "Cycle finished. Waiting for next interval..."
